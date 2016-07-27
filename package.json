@@ -1,0 +1,23 @@
+{
+  "name": "oozie",
+  "version": "0.0.1",
+  "description": "Javascript interface to Oozie hadoop scheduler.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "oozie",
+    "scheduler",
+    "hadoop"
+  ],
+  "author": "Septian Wibisono",
+  "license": "ISC",
+  "dependencies": {
+    "apiclient": "^0.2.5",
+    "hdfs247": "0.0.7",
+    "moniker": "^0.1.2",
+    "tmp": "0.0.28",
+    "xml2js": "^0.4.17"
+  }
+}
