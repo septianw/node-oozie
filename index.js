@@ -11,6 +11,7 @@ var Events = require('events');
  */
 function Oozie (config) {
   var self = this;
+  this.xml = {};
   this.config = config;
   this.setName();
 
@@ -18,7 +19,7 @@ function Oozie (config) {
   oseed.base.hostname = config.node.oozie.hostname;
   oseed.base.port = config.node.oozie.port;
 
-  this.orest = new Apiclient(oseed);
+  this.rest = new Apiclient(oseed);
 
   if (config.artefact) {
     this.wfloc = config.artefact.workflow || '/user/' + config.node.hdfs.user + '/oozie-artefact/workflow/';
@@ -48,7 +49,6 @@ function Oozie (config) {
     if (e) throw e;
     self.hdfs.mkdirs({path: self.jarloc, 'user.name': config.node.hdfs.user}, function (e, r, b) {
       if (e) throw e;
-      console.log(b);
       if (JSON.parse(b).boolean) {
         self.emit('ready');
       }
@@ -69,6 +69,15 @@ Oozie.prototype.setName = function (name) {
   } else {
     this.name = name;
   }
+  return this;
+};
+
+/**
+ * get name of job.
+ * @return {String} job name
+ */
+Oozie.prototype.getName = function () {
+  return this.name;
 };
 
 /**
@@ -81,6 +90,8 @@ Oozie.prototype.setProperty = function (property) {
   } else {
     this.property = this.getDefaultProperty();
   }
+
+  return this;
   // simpan property ke this.property
 };
 
@@ -122,7 +133,7 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
             value: '${queueName}'
           }
         },
-        'main-class': '${namaclass}',
+        'main-class': '${main-class}',
         'java-opts': {},
         'capture-output': ''
       },
@@ -154,6 +165,7 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
   var choosedName = this.name;
 
   if (wfconfig) {
+    console.log(require('util').inspect(wfconfig, { depth: null }));
     statxml.$.name = wfconfig.name || choosedName;
     statxml.action = wfconfig.action || defaultxml.action;
     statxml.action.java = (wfconfig.action && wfconfig.action.java) || defaultxml.action.java;
@@ -192,14 +204,17 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
   }
   statxml.action.java.file = '${nameNode}' + this.jarloc + '${namajar}';
 
-  console.log(wfconfig);
+  // console.log(wfconfig);
   var xml = xmlbuild.buildObject(statxml);
-  // console.log(xml);
+  this.workflow = statxml;
+  this.xml.workflow = xml;
+  console.log(xml);
   // console.log(statxml);
   var hdfsOpt = JSON.parse(JSON.stringify(this.hdfsOpt));
 
   hdfsOpt.localpath = tmpfile;
   hdfsOpt.path = this.wfloc + choosedName + '.xml';
+
 
   fs.writeFile(tmpfile, xml, function writeFilecb (err) {
     if (err) { throw err; } else {
@@ -210,12 +225,15 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
           cb(e);
         } else {
           fs.unlinkSync(tmpfile);
+          self.wffile = self.wfloc + choosedName + '.xml';
+          self.emit('wfReady');
           cb(null, self.wfloc + choosedName + '.xml');
         }
       });
     }
   });
-  // return xml;
+  self.emit('wfGenerated');
+  return this;
 };
 
 /**
@@ -280,7 +298,7 @@ Oozie.prototype.getDefaultWorkflow = function () {
             value: '${queueName}'
           }]
         },
-        'main-class': '${namaclass}', // class ambil dari input
+        'main-class': '${classname}', // class ambil dari input
         'java-opts': [],
         arg: [                        // argument ambil dari input
           '/biasanya/path/ke/input',
@@ -322,19 +340,21 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
     wfraw = wfconfig;
   } else {
     wfraw = this.getDefaultWorkflow();
-
-    if (this.name) {
-      wfraw.name = this.name;
-      wfraw.startTo = this.name;
-      wfraw.action.name = this.name;
-    }
-
-    wfraw['main-class'] = className;
-    wfraw.action.java.arg = arg;
-    wfraw.action.java.file = jobfile;
   }
 
-  console.log(propraw);
+  if (this.name) {
+    wfraw.name = this.name;
+    wfraw.startTo = this.name;
+    wfraw.action.name = this.name;
+  }
+
+  // wfraw.action.java['main-class'] = className;
+  wfraw.action.java.arg = arg;
+  wfraw.action.java.file = jobfile;
+
+  if (process.env.NODE_ENV === 'development') {
+    console.trace(propraw);
+  }
 
   this.genwf(null, wfraw, function (err, path) {
     if (err) { throw err; } else {
@@ -346,33 +366,42 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
         name: 'namajar',
         value: jobfile
       });
+      propraw.property.push({
+        name: 'classname',
+        value: className
+      });
 
-      console.log(xmlbuild.buildObject(propraw));
+      self.property = propraw;
+      self.xml.property = xmlbuild.buildObject(propraw);
 
-      self.orest.post('jobs', {}, {
+      if (process.env.NODE_ENV === 'development') {
+        console.trace(xmlbuild.buildObject(propraw));
+      }
+
+      self.rest.post('jobs', {}, {
         body: xmlbuild.buildObject(propraw),
         headers: {
           'Content-Type': 'application/xml;charset=UTF-8'
         }
       }, function (e, r, b) {
         if (process.env.NODE_ENV === 'development') {
-          console.trace(require('util').inspect(r, { depth: null }));
+          // console.trace(require('util').inspect(r, { depth: null }));
         }
         if (e) { cb(e); } else {
           var out;
           try {
             out = JSON.parse(b);
-            cb(null, out);
+            self.jobid = out.id;
+            self.emit('jobSubmitted');
+            // cb(null, out);
           } catch (er) {
-            cb(null, b);
+            self.error = er;
+            // cb(null, b);
           }
         }
       });
     }
   });
-
-
-
   // butuh workflow dan properties
   // workflow harus sudah ada di hdfs
   // properties harus sesuai dengan workflow
@@ -380,84 +409,88 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
   // untuk sekarang ignore type
 };
 
-var wfconfig = {
-  name: '${wfName}',
-  // startTo: 'terserah-biasanya-ada-node',  // ini node action, bisa dikosongkan.
-  endName: 'end',
-  killName: 'fail',
-  killMessage: 'Workflow failed, error message[${wf:errorMessage(wf:lastErrorNode())}]',  // pesan error ketika gagal.
-  action: {
-    // name: 'terserah-biasanya-ada-node',  // action name bisa dikosongkan.
-    java: {     // ini kalau action ini menjalankan aplikasi java, selain java belum
-      'job-tracker': '${jobTracker}',
-      'name-node': '${nameNode}',
-      configuration: {
-        property: [{
-          name: 'mapred.job.queue.name',
-          value: '${queueName}'
-        }]
-      },
-      'main-class': '${namaclass}',
-      'java-opts': [],
-      arg: [
-        '/biasanya/path/ke/input',
-        '/biasanya/path/ke/output'
-      ],
-      // file: 'file.jar'  // lokasi jar didefinisikan saat new oozie.
-    }
+/**
+ * Response default for start, rerun, get.
+ * @param  {Object} e Error Object from request.
+ * @param  {Object} r Response Object from request.
+ * @param  {Mixed} b Response body from request.
+ */
+function defaultResponse(e, r, b) {
+  if (process.env.NODE_ENV === 'development') {
+    // console.trace(require('util').inspect(r, { depth: null }));
   }
-};
+  if (e) { throw e; }
+}
 
+/**
+ * Start Job
+ * @param  {String} jobid Job ID to be Start.
+ */
+Oozie.prototype.start = function (jobid) {
+  var self = this, id;
 
-var config = {
-  node: {
-    hdfs: {
-      protocol: 'http',
-      hostname: '192.168.1.225',
-      port: 50070,
-      user: 'apps',
-      overwrite: true
-    },
-    jobTracker: {
-      protocol: 'http',
-      hostname: '192.168.1.225',
-      port: 50030
-    },
-    nameNode: {
-      hostname: '192.168.1.225',
-      port: 8020
-    },
-    oozie: {
-      protocol: 'http',
-      hostname: '192.168.1.225',
-      port: 11000,
-      user: 'apps'
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
+
+  this.rest.put('job', {id: id}, {
+    qs: {
+      action: 'start'
     }
-  },
-  libpath: '/user/apps/lib/247',
-  queueName: 'root.default',
-  // artefact: {
-  //   jar: '/user/research/oozie-artefact/jar/',
-  //   workflow: '/user/research/oozie-artefact/workflow/'
-  // }
+  }, defaultResponse);
 };
 
-var oozie = new Oozie(config);
+/**
+ * Re running job, identified by jobid.
+ * @param  {String} jobid Job id that needed to run.
+ */
+Oozie.prototype.rerun = function (jobid) {
+  // TODO: add property alternative as parameter. each property must be unique.
+  var self = this, id;
 
-// oozie.on('ready', function () {
-//   console.log('siap.');
-// });
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
 
-oozie.on('ready', function () {
-  console.log(oozie);
-  oozie.submit('java', null, 'file.jar', 'experiment01.subject01', [], [{
-    name: 'namajar',
-    value: 'file.jar'
-  }]);
-});
-// oozie.rerun('jobid');
-// oozie.coordinator();
+  this.rest.put('job', {id: id}, {
+    qs: {
+      action: 'rerun'
+    },
+    body: self.xml.property
+  }, defaultResponse);
+};
 
-// oozie.genwf(['satu', 'dua'], {}, function (err) {
-//   console.log(err);
-// });
+/**
+ * Get job info identified by jobId.
+ * @param  {String}   jobid Job Id that needed to get.
+ */
+Oozie.prototype.get = function (jobid) {
+  var self = this, id, info;
+
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
+
+  this.rest.get('jobInfo', {id: id}, {}, function (e, r, b) {
+    if (process.env.NODE_ENV === 'development') {
+      // console.trace(require('util').inspect(r, { depth: null }));
+    }
+    if (e) { cb(e); } else {
+      try {
+        info = JSON.parse(b);
+        self.info = info;
+      } catch (er) {
+        self.error = er;
+      }
+      self.emit('infoReady');
+    }
+  });
+}
+
+exports = module.exports = Oozie;
