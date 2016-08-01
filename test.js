@@ -73,146 +73,148 @@ var subject04 = new Oozie(config);  // for defining events.
 //   console.log('siap.');
 // });
 
-describe('Submit Job', function () {
-  describe(`subject01: Submit job from custom defined workflow config.
-            Workflow config can be defined from outside, despite it's default to java`, function () {
-    it('Should submit job using custom config, with result of job id', function (done) {
-      subject01.on('ready', function () {
-        subject01.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
-          name: 'namajar',
-          value: 'casetwo.jar'
-        }], wfconfig);
-      });
-      subject01.on('jobSubmitted', function () {
-        console.log(subject01.jobid);
-        assert(subject01.jobid);
-        done();
-      });
-    });
-  });
-
-  describe(`subject02: Submit job using default workflow java config.
-            This way, we can define our java job only using classname, filename,
-            and arguments.`, function () {
-    it('Should submit job using default config, with result of job id', function (done) {
-      subject02.on('ready', function () {
-        subject02.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
-          name: 'namajar',
-          value: 'casetwo.jar'
-        }]);
-        subject02.on('jobSubmitted', function () {
-          console.log(subject02.jobid);
-          assert(subject02.jobid);
-          done();
-        });
-      });
-    });
-  });
-});
+// describe('Submit Job', function () {
+//   describe(`subject01: Submit job from custom defined workflow config.
+//             Workflow config can be defined from outside, despite it's default to java`, function () {
+//     it('Should submit job using custom config, with result of job id', function (done) {
+//
+//       subject01.on('ready', function () {
+//         subject01.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
+//           name: 'namajar',
+//           value: 'casetwo.jar'
+//         }], wfconfig);
+//       });
+//       subject01.on('jobSubmitted', function () {
+//         console.log(subject01.jobid);
+//         assert(subject01.jobid);
+//         done();
+//       });
+//     });
+//   });
+//
+//   describe(`subject02: Submit job using default workflow java config.
+//             This way, we can define our java job only using classname, filename,
+//             and arguments.`, function () {
+//     it('Should submit job using default config, with result of job id', function (done) {
+//       subject02.on('ready', function () {
+//         subject02.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
+//           name: 'namajar',
+//           value: 'casetwo.jar'
+//         }]);
+//         subject02.on('jobSubmitted', function () {
+//           console.log(subject02.jobid);
+//           assert(subject02.jobid);
+//           done();
+//         });
+//       });
+//     });
+//   });
+// });
 
 subject03.on('ready', function () {
-  subject03.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
-    name: 'namajar',
-    value: 'casetwo.jar'
-  }]);
-  subject03.on('jobSubmitted', function () {
-    console.log(subject01.jobid);
-    assert(subject01.jobid);
-    done();
-  });
+  // subject03.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
+  //   name: 'namajar',
+  //   value: 'casetwo.jar'
+  // }]);
+  // subject03.on('jobSubmitted', function () {
+  //   console.log(subject01.jobid);
+  //   assert(subject01.jobid);
+  //   done();
+  // });
 });
 
 describe('Events that occured during job definition lifecycle.', function () {
-  describe('ready: This event will emitted when directory created in HDFS.', function () {
-    it('Should emit when Oozie class ready to receive job.', function (done) {
-      var timeout = setTimeout(function () {
-        assert(false, 'Oozie fail to emit Ready.');
+  // describe('ready: This event will emitted when directory created in HDFS.', function () {
+  //   it('Should emit when Oozie class ready to receive job.', function (done) {
+  //     var readyFired = false;
+  //     setTimeout(function () {
+  //       assert(readyFired, 'Oozie fail to emit Ready.');
+  //       done();
+  //     }, 10000);
+  //
+  //
+  //     subject03.on('ready', function () {
+  //       readyFired = true;
+  //     });
+  //   });
+  // });
+  describe('jobSubmitted: This event will emitted when jobs are submitted to oozie.', function () {
+    it('Should emit jobSubmitted event when workflow successfuly submitted to oozie.', function (done) {
+      var submittedFired = false;
+      setTimeout(function () {
+        assert(submittedFired, 'Oozie fail to emit jobSubmitted.');
+        assert(subject04.jobid);
         done();
-      }, 2000);
+      }, 100000);
 
       subject04.on('ready', function () {
         subject04.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
           name: 'namajar',
           value: 'casetwo.jar'
         }]);
-
-        clearTimeout(timeout);
-        assert(true);
-        done();
       });
-    });
-  });
-  describe('wfGenerated: This event will emitted when workflow are generarated in memory.', function () {
-    it('Should emit wfGenerated event when workflow already generated in memory.', function (done) {
-      var timeout = setTimeout(function () {
-        assert(false, 'Oozie fail to emit wfGenerated.');
-        done();
-      }, 2000);
 
-      subject01.on('wfGenerated', function () {
-        clearTimeout(timeout);
-        assert(true);
-        assert(subject01.xml.workflow);
-        done();
-      });
-    });
-  });
-  describe('wfReady: This event will emitted when workflow are uploaded to HDFS.', function () {
-    it('Should emit wfReady event when workflow already uploaded to HDFS.', function (done) {
-      var timeout = setTimeout(function () {
-        assert(false, 'Oozie fail to emit wfReady.');
-        done();
-      }, 2000);
-
-      subject01.on('wfReady', function () {
-        clearTimeout(timeout);
-        assert(true);
-        done();
-      });
-    });
-  });
-  describe('jobSubmitted: This event will emitted when jobs are submitted to oozie.', function () {
-    it('Should emit jobSubmitted event when workflow successfuly submitted to oozie.', function (done) {
-      var timeout = setTimeout(function () {
-        assert(false, 'Oozie fail to emit jobSubmitted.');
-        done();
-      }, 2000);
-
-      subject04.
       subject04.on('jobSubmitted', function () {
-        clearTimeout(timeout);
-        subject04.get();
-        assert(true);
-        assert(subject04.jobid);
-        done();
+        console.log(subject04.jobid);
+        submittedFired = true;
+        // done();
       });
     });
   });
-  describe('infoReady: This event will emitted when job info already get.', function () {
-    it('Should emit infoReady when success retrieving job from oozie.', function (done) {
-      var timeout = setTimeout(function () {
-        assert(false, 'Oozie fail to emit infoReady.');
-        done();
-      }, 2000);
-
-      subject04.on('infoReady', function () {
-        clearTimeout(timeout);
-        assert(true);
-        assert(subject04.info);
-        done();
-      });
-
-      // subject02.on('jobSubmitted', function () {
-      //   subject02.get();
-      //   subject02.on('infoReady', function () {
-      //     clearTimeout(timeout);
-      //     assert(true);
-      //     assert(subject02.info);
-      //     done();
-      //   });
-      // });
-    });
-  });
+  // describe('wfGenerated: This event will emitted when workflow are generarated in memory.', function () {
+  //   it('Should emit wfGenerated event when workflow already generated in memory.', function (done) {
+  //     var timeout = setTimeout(function () {
+  //       assert(false, 'Oozie fail to emit wfGenerated.');
+  //       done();
+  //     }, 2000);
+  //
+  //     subject01.on('wfGenerated', function () {
+  //       clearTimeout(timeout);
+  //       assert(true);
+  //       assert(subject01.xml.workflow);
+  //       done();
+  //     });
+  //   });
+  // });
+  // describe('wfReady: This event will emitted when workflow are uploaded to HDFS.', function () {
+  //   it('Should emit wfReady event when workflow already uploaded to HDFS.', function (done) {
+  //     var timeout = setTimeout(function () {
+  //       assert(false, 'Oozie fail to emit wfReady.');
+  //       done();
+  //     }, 2000);
+  //
+  //     subject01.on('wfReady', function () {
+  //       clearTimeout(timeout);
+  //       assert(true);
+  //       done();
+  //     });
+  //   });
+  // });
+  // describe('infoReady: This event will emitted when job info already get.', function () {
+  //   it('Should emit infoReady when success retrieving job from oozie.', function (done) {
+  //     var timeout = setTimeout(function () {
+  //       assert(false, 'Oozie fail to emit infoReady.');
+  //       done();
+  //     }, 2000);
+  //
+  //     subject04.on('infoReady', function () {
+  //       clearTimeout(timeout);
+  //       assert(true);
+  //       assert(subject04.info);
+  //       done();
+  //     });
+  //
+  //     // subject02.on('jobSubmitted', function () {
+  //     //   subject02.get();
+  //     //   subject02.on('infoReady', function () {
+  //     //     clearTimeout(timeout);
+  //     //     assert(true);
+  //     //     assert(subject02.info);
+  //     //     done();
+  //     //   });
+  //     // });
+  //   });
+  // });
 });
 // oozie.on('ready', function () {
 //   // console.log(oozie);

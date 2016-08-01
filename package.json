@@ -1,6 +1,6 @@
 {
   "name": "oozie",
-  "version": "0.0.1",
+  "version": "0.0.1-beta",
   "description": "Javascript interface to Oozie hadoop scheduler.",
   "main": "index.js",
   "scripts": {
@@ -11,6 +11,10 @@
     "scheduler",
     "hadoop"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/septianw/node-oozie.git"
+  },
   "author": "Septian Wibisono",
   "license": "ISC",
   "dependencies": {

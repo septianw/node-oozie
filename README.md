@@ -1,3 +1,6 @@
+## Development status
+**Still in testing, not ready for production**
+
 ## Usage
 ```
   var Oozie = require('./index.js');
