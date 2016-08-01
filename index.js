@@ -349,8 +349,10 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
   }
 
   // wfraw.action.java['main-class'] = className;
-  wfraw.action.java.arg = arg;
-  wfraw.action.java.file = jobfile;
+  if (wfraw.action.java) {
+    wfraw.action.java.arg = arg;
+    wfraw.action.java.file = jobfile;
+  }
 
   if (process.env.NODE_ENV === 'development') {
     console.trace(propraw);
@@ -358,18 +360,20 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
 
   this.genwf(null, wfraw, function (err, path) {
     if (err) { throw err; } else {
-      propraw.property.push({
-        name: 'oozie.wf.application.path',
-        value: path
-      });
-      propraw.property.push({
-        name: 'namajar',
-        value: jobfile
-      });
-      propraw.property.push({
-        name: 'classname',
-        value: className
-      });
+      if (wfraw.action.java) {
+        propraw.property.push({
+          name: 'oozie.wf.application.path',
+          value: path
+        });
+        propraw.property.push({
+          name: 'namajar',
+          value: jobfile
+        });
+        propraw.property.push({
+          name: 'classname',
+          value: className
+        });
+      }
 
       self.property = propraw;
       self.xml.property = xmlbuild.buildObject(propraw);
