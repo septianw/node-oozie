@@ -47,24 +47,24 @@ function Oozie (config) {
 
   this.hdfs.mkdirs({path: this.wfloc, 'user.name': config.node.hdfs.user}, function (e, r, b) {
     if (e) {
-      throw e;
       self.error = e;
       self.emit('error');
+      throw e;
     }
     self.hdfs.mkdirs({path: self.jarloc, 'user.name': config.node.hdfs.user}, function (e, r, b) {
       if (e) {
-        throw e;
         self.error = e;
         self.emit('error');
+        throw e;
       }
 
       try {
         out = JSON.parse(b);
         self.emit('ready');
       } catch (er) {
+        console.log(er);
         self.error = er.toString();
         self.emit('error');
-        console.log(er);
       }
     });
   });
@@ -406,7 +406,6 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
           // console.trace(require('util').inspect(r, { depth: null }));
         }
         if (e) {
-          // cb(e);
           self.error = e;
           self.emit('error');
         } else {
@@ -415,13 +414,10 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
             out = JSON.parse(b);
             self.jobid = out.id;
             self.emit('jobSubmitted');
-            // cb(null, out);
           } catch (er) {
-            self.error = er.toString();
             console.log(self.error);
+            self.error = er.toString();
             self.emit('error');
-            // cb(null, b);
-            console.log(er);
           }
         }
       });
@@ -468,6 +464,26 @@ Oozie.prototype.start = function (jobid) {
 };
 
 /**
+ * Kill Job
+ * @param  {String} jobid Job ID to be Killed.
+ */
+Oozie.prototype.kill = function (jobid) {
+  var self = this, id;
+
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
+
+  this.rest.put('job', {id: id}, {
+    qs: {
+      action: 'kill'
+    }
+  }, defaultResponse);
+};
+
+/**
  * Re running job, identified by jobid.
  * @param  {String} jobid Job id that needed to run.
  */
@@ -507,7 +523,6 @@ Oozie.prototype.get = function (jobid) {
       // console.trace(require('util').inspect(r, { depth: null }));
     }
     if (e) {
-      // cb(e);
       self.error = e;
       self.emit('error');
     } else {
