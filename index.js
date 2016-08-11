@@ -521,6 +521,6 @@ Oozie.prototype.get = function (jobid) {
       }
     }
   });
-}
+};
 
 exports = module.exports = Oozie;

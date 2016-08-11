@@ -15,9 +15,7 @@
     "type": "git",
     "url": "https://github.com/septianw/node-oozie.git"
   },
-  "author": {
-    "name": "Septian Wibisono"
-  },
+  "author": "Septian Wibisono",
   "license": "ISC",
   "dependencies": {
     "apiclient": "^0.2.5",
@@ -25,35 +23,5 @@
     "moniker": "^0.1.2",
     "tmp": "0.0.28",
     "xml2js": "^0.4.17"
-  },
-  "gitHead": "4c0a120b059a7e196614a8491ce16b922722afd5",
-  "bugs": {
-    "url": "https://github.com/septianw/node-oozie/issues"
-  },
-  "homepage": "https://github.com/septianw/node-oozie",
-  "_id": "oozie@0.0.1-beta",
-  "_shasum": "73c569f94422d6d280736cdbff5eabb3e1403a37",
-  "_from": "oozie@latest",
-  "_npmVersion": "2.15.0",
-  "_nodeVersion": "4.4.2",
-  "_npmUser": {
-    "name": "septianw",
-    "email": "asep.gelo@gmail.com"
-  },
-  "dist": {
-    "shasum": "73c569f94422d6d280736cdbff5eabb3e1403a37",
-    "tarball": "http://192.168.1.245:4873/oozie/-/oozie-0.0.1-beta.tgz"
-  },
-  "maintainers": [
-    {
-      "name": "septianw",
-      "email": "asep.gelo@gmail.com"
-    }
-  ],
-  "_npmOperationalInternal": {
-    "host": "packages-12-west.internal.npmjs.com",
-    "tmp": "tmp/oozie-0.0.1-beta.tgz_1470044353492_0.5105602080002427"
-  },
-  "directories": {},
-  "_resolved": "http://192.168.1.245:4873/oozie/-/oozie-0.0.1-beta.tgz"
+  }
 }
