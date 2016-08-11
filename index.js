@@ -46,11 +46,25 @@ function Oozie (config) {
   this.hdfs = new Hdfs(this.hdfsConfig.node);
 
   this.hdfs.mkdirs({path: this.wfloc, 'user.name': config.node.hdfs.user}, function (e, r, b) {
-    if (e) throw e;
+    if (e) {
+      throw e;
+      self.error = e;
+      self.emit('error');
+    }
     self.hdfs.mkdirs({path: self.jarloc, 'user.name': config.node.hdfs.user}, function (e, r, b) {
-      if (e) throw e;
-      if (JSON.parse(b).boolean) {
+      if (e) {
+        throw e;
+        self.error = e;
+        self.emit('error');
+      }
+
+      try {
+        out = JSON.parse(b);
         self.emit('ready');
+      } catch (er) {
+        self.error = er.toString();
+        self.emit('error');
+        console.log(er);
       }
     });
   });
@@ -391,7 +405,11 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
         if (process.env.NODE_ENV === 'development') {
           // console.trace(require('util').inspect(r, { depth: null }));
         }
-        if (e) { cb(e); } else {
+        if (e) {
+          // cb(e);
+          self.error = e;
+          self.emit('error');
+        } else {
           var out;
           try {
             out = JSON.parse(b);
@@ -399,8 +417,11 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
             self.emit('jobSubmitted');
             // cb(null, out);
           } catch (er) {
-            self.error = er;
+            self.error = er.toString();
+            console.log(self.error);
+            self.emit('error');
             // cb(null, b);
+            console.log(er);
           }
         }
       });
@@ -485,14 +506,19 @@ Oozie.prototype.get = function (jobid) {
     if (process.env.NODE_ENV === 'development') {
       // console.trace(require('util').inspect(r, { depth: null }));
     }
-    if (e) { cb(e); } else {
+    if (e) {
+      // cb(e);
+      self.error = e;
+      self.emit('error');
+    } else {
       try {
         info = JSON.parse(b);
         self.info = info;
+        self.emit('infoReady');
       } catch (er) {
         self.error = er;
+        self.emit('error');
       }
-      self.emit('infoReady');
     }
   });
 }
