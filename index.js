@@ -708,7 +708,61 @@ Oozie.prototype.kill = function (jobid) {
     if (r.statusCode == '200'){
       self.emit('killed');
     }else{
-      self.error = r.statusMessage;
+      self.error = r.caseless.dict['oozie-error-message'];
+      self.emit('error');
+    }
+  });
+};
+
+/**
+ * Suspend Job
+ * @param  {String} jobid Job ID to be Suspended.
+ */
+Oozie.prototype.suspend = function (jobid) {
+  var self = this, id;
+
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
+
+  this.rest.put('job', {id: id}, {
+    qs: {
+      action: 'suspend'
+    }
+  }, function (e,r,b){
+    if (r.statusCode == '200'){
+      self.emit('suspended');
+    }else{
+      self.error = r.caseless.dict['oozie-error-message'];
+      self.emit('error');
+    }
+  });
+};
+
+/**
+ * Resume Job
+ * @param  {String} jobid Job ID to be Resumed.
+ */
+Oozie.prototype.resume = function (jobid) {
+  var self = this, id;
+
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
+
+  this.rest.put('job', {id: id}, {
+    qs: {
+      action: 'resume'
+    }
+  }, function (e,r,b){
+    if (r.statusCode == '200'){
+      self.emit('resumed');
+    }else{
+      self.error = r.caseless.dict['oozie-error-message'];
       self.emit('error');
     }
   });
