@@ -816,7 +816,7 @@ Oozie.prototype.get = function (jobid) {
         self.info = info;
         self.emit('infoReady');
       } catch (er) {
-        self.error = er;
+        self.error = r.caseless.dict['oozie-error-message'];
         self.emit('error');
       }
     }
