@@ -249,6 +249,102 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
   self.emit('wfGenerated');
   return this;
 };
+/**
+ * Generate oozie coordinator-app
+ * @param  {Object}   coordconfig Full coordinator config
+ * @param  {Function} cb       Callback function
+ */
+Oozie.prototype.gencoord = function (coordconfig, cb) {
+  var fs = require('fs');
+  var self = this;
+  var tmp = require('tmp');
+  var tmpfile = tmp.tmpNameSync();
+  var xmlbuild = new xml2js.Builder({
+    rootName: 'coordinator-app',
+  });
+
+  var defaultxml = {
+    $: {
+      xmlns: 'uri:oozie:coordinator:0.2',
+      name: '${sahyung-coord}',
+      frequency: '${freq}',
+      start: '${start}',
+      end: '${end}',
+      timezone: 'UTC'
+    },
+    action: {
+      workflow: {
+        'app-path': '${workflowAppUri}',
+        configuration: {
+          property: [
+            {
+              name: 'mapred.job.queue.name',
+              value: '${queueName}'
+            },
+            {
+              name: 'jobTracker',
+              value: '${jobTracker}'
+            },
+            {
+              name: 'nameNode',
+              value: '${nameNode}'
+            }
+          ]
+        }
+      },
+    },
+  };
+  var statxml = JSON.parse(JSON.stringify(defaultxml));
+
+  var choosedName = this.name;
+
+  if (coordconfig) {
+    console.log(require('util').inspect(coordconfig, { depth: null }));
+    statxml.$.name = coordconfig.name || choosedName;
+    statxml.action = coordconfig.action || defaultxml.action;
+    statxml.action.workflow = (coordconfig.workflow && coordconfig.action.workflow) || defaultxml.action.workflow;
+
+    if (coordconfig.action.name) {
+      statxml.action.$ = {
+        name: coordconfig.action.name
+      };
+      delete statxml.action.name;
+    }
+  } else {
+    statxml.$.name = choosedName;
+  }
+
+  var xml = xmlbuild.buildObject(statxml);
+  this.workflow = statxml;
+  this.xml.workflow = xml;
+  // debugger;
+  var hdfsOpt = JSON.parse(JSON.stringify(this.hdfsOpt));
+
+  hdfsOpt.localpath = tmpfile;
+  hdfsOpt.path = this.wfloc + choosedName + '.xml';
+
+
+  fs.writeFile(tmpfile, xml, function writeFilecb (err) {
+    if (err) { throw err; } else {
+      self.hdfs.upload(hdfsOpt, function (e, r, b) {
+        if (e) {
+          console.error(r);
+          console.error(b);
+          self.error = e;
+          self.emit('coordError');
+          cb(e);
+        } else {
+          fs.unlinkSync(tmpfile);
+          self.wffile = self.wfloc + choosedName + '.xml';
+          self.emit('coordReady');
+          cb(null, self.wfloc + choosedName + '.xml');
+        }
+      });
+    }
+  });
+  self.emit('coordGenerated');
+  return this;
+};
 
 /**
  * Get default property
@@ -324,6 +420,44 @@ Oozie.prototype.getDefaultWorkflow = function () {
   };
 
   return wfconfig;
+};
+
+Oozie.prototype.getDefaultCoord = function () {
+  var coordconfig = {
+    name: 'coord-'+this.name,
+    startTo: this.name,  // ini node action, bisa dikosongkan.
+    endName: 'end',
+    killName: 'fail',
+    killMessage: 'Coordinator failed, error message[${wf:errorMessage(wf:lastErrorNode())}]',  // pesan error ketika gagal.
+    action: {
+      name: this.name,  // action name bisa dikosongkan.
+      frequency: '${freq}',
+      start: '${start}',
+      end: '${end}',
+      timezone: 'UTC',
+      workflow: {
+        'app-path': '${workflowAppUri}',
+        configuration: {
+            property: [
+              {
+                name: 'jobTracker',
+                value: '${jobTracker}'
+              },
+              {
+                name: 'nameNode',
+                value: '${nameNode}'
+              },
+              {
+                name: 'queueName',
+                value: '${queueName}'
+              }
+            ]
+        }
+      }
+    }
+  };
+
+  return coordconfig;
 };
 
 /**
@@ -431,6 +565,96 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
 };
 
 /**
+ * submit coordinator to oozie
+ * @param  {String}   name       Name of job, set to random if null
+ * @param  {Array}    prop       Array of object properties, this array will be concatenated to default properties, set empty array if using default properties only.
+ * @param  {Object}   coordconfig   Object of custom workflow config
+ * @param  {Function} cb         Callback function.
+ */
+Oozie.prototype.submitcoord = function (type, name, jobfile, className, arg, prop, coordconfig, cb) {
+  var self = this;
+  var propraw = this.getDefaultProperty(), coordraw,
+    xmlbuild = new xml2js.Builder({
+      rootName: 'configuration'
+    });
+
+  propraw.property = propraw.property.concat(prop);   // FIXME: this lead to duplicate key.
+
+  if (name) {
+    this.name = name;
+  }
+
+  if (coordconfig) {
+    coordraw = coordconfig;
+  } else {
+    coordraw = this.getDefaultCoord();
+  }
+
+  if (this.name) {
+    coordraw.name = this.name;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.trace('propraw');
+    console.trace(propraw);
+  }
+  // console.log('coordraw');
+  // console.log(coordraw);
+
+  this.gencoord(coordraw, function (err, path) {
+    if (err) { console.log('cekidot'); throw err; } else {
+      if (coordraw.action.workflow) {
+        propraw.property.push({
+          name: 'oozie.coord.application.path',
+          value: path
+        });
+        propraw.property.push({
+          name: 'namajar',
+          value: jobfile
+        });
+        propraw.property.push({
+          name: 'classname',
+          value: className
+        });
+      }
+      console.log(propraw);
+
+      self.property = propraw;
+      self.xml.property = xmlbuild.buildObject(propraw);
+
+      if (process.env.NODE_ENV === 'development') {
+        console.trace(xmlbuild.buildObject(propraw));
+      }
+      console.log('(propraw)');
+      console.log((propraw));
+      self.rest.post('jobs', {}, {
+        body: xmlbuild.buildObject(propraw),
+        headers: {
+          'Content-Type': 'application/xml;charset=UTF-8'
+        }
+      }, function (e, r, b) {
+        if (process.env.NODE_ENV === 'development') {
+          console.trace(require('util').inspect(r, { depth: null }));
+        }
+        if (e) { console.log('sini cuy'); cb(e);} else {
+          var out;
+          try {
+            out = JSON.parse(b);
+            self.jobid = out.id;
+            self.emit('coordSubmitted');
+            // cb(null, out);
+          } catch (er) {
+            self.error = er;
+            self.emit('coordError');
+            // cb(null, b);
+          }
+        }
+      });
+    }
+  });
+};
+
+/**
  * Response default for start, rerun, get.
  * @param  {Object} e Error Object from request.
  * @param  {Object} r Response Object from request.
@@ -480,7 +704,68 @@ Oozie.prototype.kill = function (jobid) {
     qs: {
       action: 'kill'
     }
-  }, defaultResponse);
+  }, function (e,r,b){
+    if (r.statusCode == '200'){
+      self.emit('killed');
+    }else{
+      self.error = r.caseless.dict['oozie-error-message'];
+      self.emit('error');
+    }
+  });
+};
+
+/**
+ * Suspend Job
+ * @param  {String} jobid Job ID to be Suspended.
+ */
+Oozie.prototype.suspend = function (jobid) {
+  var self = this, id;
+
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
+
+  this.rest.put('job', {id: id}, {
+    qs: {
+      action: 'suspend'
+    }
+  }, function (e,r,b){
+    if (r.statusCode == '200'){
+      self.emit('suspended');
+    }else{
+      self.error = r.caseless.dict['oozie-error-message'];
+      self.emit('error');
+    }
+  });
+};
+
+/**
+ * Resume Job
+ * @param  {String} jobid Job ID to be Resumed.
+ */
+Oozie.prototype.resume = function (jobid) {
+  var self = this, id;
+
+  if (jobid) {
+    id = jobid;
+  } else {
+    id = this.jobid;
+  }
+
+  this.rest.put('job', {id: id}, {
+    qs: {
+      action: 'resume'
+    }
+  }, function (e,r,b){
+    if (r.statusCode == '200'){
+      self.emit('resumed');
+    }else{
+      self.error = r.caseless.dict['oozie-error-message'];
+      self.emit('error');
+    }
+  });
 };
 
 /**
@@ -531,7 +816,7 @@ Oozie.prototype.get = function (jobid) {
         self.info = info;
         self.emit('infoReady');
       } catch (er) {
-        self.error = er;
+        self.error = r.caseless.dict['oozie-error-message'];
         self.emit('error');
       }
     }
