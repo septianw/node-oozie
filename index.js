@@ -22,8 +22,8 @@ function Oozie (config) {
   this.rest = new Apiclient(oseed);
 
   if (config.artefact) {
-    this.wfloc = config.artefact.workflow || '/user/' + config.node.hdfs.user + '/oozie-artefact/workflow/';
-    this.jarloc = config.artefact.jar || '/user/' + config.node.hdfs.user + '/oozie-artefact/jar/';
+    this.wfloc = config.artefact.workflow + '/' || '/user/' + config.node.hdfs.user + '/oozie-artefact/workflow/';
+    this.jarloc = config.artefact.jar + '/' || '/user/' + config.node.hdfs.user + '/oozie-artefact/jar/';
   } else {
     this.wfloc = '/user/' + config.node.hdfs.user + '/oozie-artefact/workflow/';
     this.jarloc = '/user/' + config.node.hdfs.user + '/oozie-artefact/jar/';
