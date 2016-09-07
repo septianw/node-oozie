@@ -550,7 +550,7 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
             self.emit('jobSubmitted');
           } catch (er) {
             console.log(self.error);
-            self.error = er.toString();
+            self.error = r.caseless.dict['oozie-error-message'];
             self.emit('error');
           }
         }
@@ -684,7 +684,19 @@ Oozie.prototype.start = function (jobid) {
     qs: {
       action: 'start'
     }
-  }, defaultResponse);
+  }, function (e, r, b) {
+    if (e) {
+      self.error = e;
+      self.emit('error');
+    } else {
+      if (r.statusCode == '200'){
+        self.emit('started');
+      }else{
+        self.error = r.caseless.dict['oozie-error-message'];
+        self.emit('error');
+      }
+    }
+  });
 };
 
 /**
