@@ -3,7 +3,7 @@ var Hdfs = require('hdfs247');
 var names = require('moniker');
 var oseed = require('./seed.json');
 var Apiclient = require('apiclient');
-var Events = require('events');
+var Events = require('events').EventEmitter;
 
 /**
  * Oozie class constructor
