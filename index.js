@@ -295,14 +295,21 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
   hdfsOpt.localpath = tmpfile;
   hdfsOpt.path = this.wfloc + choosedName + '.xml';
 
-
   fs.writeFile(tmpfile, xml, function writeFilecb (err) {
     if (err) { throw err; } else {
       self.hdfs.upload(hdfsOpt, function (e, r, b) {
-        if (e) {
+        if (e || r.statusCode != '200') {
           console.error(r);
           console.error(b);
-          cb(e);
+          if(e){
+            self.error = e;
+            self.emit('error');
+            cb(e);
+          }else{
+            self.error = b;
+            self.emit('error');
+            cb(b);
+          }
         } else {
           fs.unlinkSync(tmpfile);
           self.wffile = self.wfloc + choosedName + '.xml';
@@ -383,7 +390,6 @@ Oozie.prototype.gencoord = function (coordconfig, cb) {
   var xml = xmlbuild.buildObject(statxml);
   this.workflow = statxml;
   this.xml.workflow = xml;
-  // debugger;
   var hdfsOpt = JSON.parse(JSON.stringify(this.hdfsOpt));
 
   hdfsOpt.localpath = tmpfile;
@@ -393,12 +399,18 @@ Oozie.prototype.gencoord = function (coordconfig, cb) {
   fs.writeFile(tmpfile, xml, function writeFilecb (err) {
     if (err) { throw err; } else {
       self.hdfs.upload(hdfsOpt, function (e, r, b) {
-        if (e) {
+        if (e || r.statusCode != '200') {
           console.error(r);
           console.error(b);
-          self.error = e;
-          self.emit('coordError');
-          cb(e);
+          if(e){
+            self.error = e;
+            self.emit('coordError');
+            cb(e);
+          }else{
+            self.error = b;
+            self.emit('coordError');
+            cb(b);
+          }
         } else {
           fs.unlinkSync(tmpfile);
           self.wffile = self.wfloc + choosedName + '.xml';
@@ -422,6 +434,7 @@ Oozie.prototype.getDefaultProperty = function () {
   var hdfsurl = JSON.parse(JSON.stringify(this.config.node.nameNode));
   hdfsurl.protocol = 'hdfs';
   hdfsurl.slashes = true;
+
   return {
     property: [
       {
@@ -447,6 +460,14 @@ Oozie.prototype.getDefaultProperty = function () {
       {
         name: 'user.name',
         value: this.config.node.oozie.user
+      },
+      {
+        name: 'mapreduce.job.queuename',
+        value: '${queueName}'
+      },
+      {
+        name: 'mapred.job.queue.name',
+        value: '${queueName}'
       }
     ]
   };
@@ -545,7 +566,6 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
     });
 
   propraw.property = propraw.property.concat(prop);   // FIXME: this lead to duplicate key.
-
   if (name) {
     this.name = name;
   }
@@ -604,6 +624,7 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
           });
           break;
         default:
+        //XXX: moved to line 607
           // if (wfraw.action.java) {
             // propraw.property.push({
             //   name: 'oozie.wf.application.path',
@@ -626,7 +647,6 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
       if (process.env.NODE_ENV === 'development') {
         console.trace(xmlbuild.buildObject(propraw));
       }
-debugger
       self.rest.post('jobs', {}, {
         body: xmlbuild.buildObject(propraw),
         headers: {
