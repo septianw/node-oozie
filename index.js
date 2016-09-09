@@ -666,8 +666,8 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
             self.jobid = out.id;
             self.emit('jobSubmitted');
           } catch (er) {
-            console.log(self.error);
             self.error = r.caseless.dict['oozie-error-message'];
+            console.log(self.error);debugger
             self.emit('error');
           }
         }
@@ -761,7 +761,7 @@ Oozie.prototype.submitcoord = function (type, name, jobfile, className, arg, pro
             self.emit('coordSubmitted');
             // cb(null, out);
           } catch (er) {
-            self.error = er;
+            self.error = r.caseless.dict['oozie-error-message'];
             self.emit('coordError');
             // cb(null, b);
           }
