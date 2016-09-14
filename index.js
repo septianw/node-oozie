@@ -601,7 +601,6 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
   if (process.env.NODE_ENV === 'development') {
     console.trace(propraw);
   }
-
   this.genwf(null, wfraw, function (err, path) {
     if (err) { throw err; } else {
       propraw.property.push({
@@ -667,7 +666,7 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
             self.emit('jobSubmitted');
           } catch (er) {
             self.error = r.caseless.dict['oozie-error-message'];
-            console.log(self.error);debugger
+            console.log(self.error);
             self.emit('error');
           }
         }
