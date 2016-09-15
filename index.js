@@ -3,7 +3,7 @@ var Hdfs = require('hdfs247');
 var names = require('moniker');
 var oseed = require('./seed.json');
 var Apiclient = require('apiclient');
-var Events = require('events');
+var Events = require('events').EventEmitter;
 
 /**
  * Oozie class constructor
@@ -123,57 +123,111 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
   var xmlbuild = new xml2js.Builder({
     rootName: 'workflow-app',
   });
-
-  var defaultxml = {
-    $: {
-      xmlns: 'uri:oozie:workflow:0.2',
-      name: '${wfName}'
-    },
-    start: {
+  if (wfconfig.action.hasOwnProperty('spark')) {
+    var defaultxml = {
       $: {
-        to: 'java-node'
-      }
-    },
-    action: {
-      $: {
-        name: 'java-node'
+        xmlns: 'uri:oozie:workflow:0.5',
+        name: '${wfName}'
       },
-      java: {
-        'job-tracker': '${jobTracker}',
-        'name-node': '${nameNode}',
-        configuration: {
-          property: {
-            name: 'mapred.job.queue.name',
-            value: '${queueName}'
+      start: {
+        $: {
+          to: 'spark-node'
+        }
+      },
+      action: {
+        $: {
+          name: 'spark-node'
+        },
+        spark: {
+          'job-tracker': '${jobTracker}',
+          'name-node': '${nameNode}',
+          configuration: {
+            property: {
+              name: 'mapred.job.queue.name',
+              value: '${queueName}'
+            }
+          },
+          'master': '${clustername}',
+          'name': wfconfig.name,
+          'class': '${classname}',
+          'jar': '${jarfile}',
+          'spark-opts': {},
+        },
+        ok: {
+          $: {
+            to: 'end'
           }
         },
-        'main-class': '${main-class}',
-        'java-opts': {},
-        'capture-output': ''
-      },
-      ok: {
-        $: {
-          to: 'end'
+        error: {
+          $: {
+            to: 'fail'
+          }
         }
       },
-      error: {
+      kill: {
         $: {
-          to: 'fail'
+          name: 'fail'
+        },
+        message: "Workflow failed, error          message[${wf:errorMessage(wf:lastErrorNode())}]      "
+      },
+      end: {
+        $: {
+          name: 'end'
         }
       }
-    },
-    kill: {
+    };
+  }else{
+    var defaultxml = {
       $: {
-        name: 'fail'
+        xmlns: 'uri:oozie:workflow:0.2',
+        name: '${wfName}'
       },
-      message: "Workflow failed, error          message[${wf:errorMessage(wf:lastErrorNode())}]      "
-    },
-    end: {
-      $: {
-        name: 'end'
+      start: {
+        $: {
+          to: 'java-node'
+        }
+      },
+      action: {
+        $: {
+          name: 'java-node'
+        },
+        java: {
+          'job-tracker': '${jobTracker}',
+          'name-node': '${nameNode}',
+          configuration: {
+            property: {
+              name: 'mapred.job.queue.name',
+              value: '${queueName}'
+            }
+          },
+          'main-class': '${main-class}',
+          'java-opts': {},
+          'capture-output': ''
+        },
+        ok: {
+          $: {
+            to: 'end'
+          }
+        },
+        error: {
+          $: {
+            to: 'fail'
+          }
+        }
+      },
+      kill: {
+        $: {
+          name: 'fail'
+        },
+        message: "Workflow failed, error          message[${wf:errorMessage(wf:lastErrorNode())}]      "
+      },
+      end: {
+        $: {
+          name: 'end'
+        }
       }
-    }
-  };
+    };
+  }
   var statxml = JSON.parse(JSON.stringify(defaultxml));
 
   var choosedName = this.name;
@@ -182,7 +236,11 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
     console.log(require('util').inspect(wfconfig, { depth: null }));
     statxml.$.name = wfconfig.name || choosedName;
     statxml.action = wfconfig.action || defaultxml.action;
-    statxml.action.java = (wfconfig.action && wfconfig.action.java) || defaultxml.action.java;
+    if(wfconfig.action.hasOwnProperty('spark')){
+      statxml.action.spark = (wfconfig.action && wfconfig.action.spark) || defaultxml.action.spark;
+    }else{
+      statxml.action.java = (wfconfig.action && wfconfig.action.java) || defaultxml.action.java;
+    }
 
     if (wfconfig.action.name) {
       statxml.action.$ = {
@@ -209,14 +267,22 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
     statxml.end.$.name = wfconfig.endName || defaultxml.end.$.name;
     statxml.kill.$.name = wfconfig.killName || defaultxml.kill.$.name;
     statxml.kill.message = wfconfig.killMessage || defaultxml.kill.message;
-    statxml.action.java.arg = arg || wfconfig.action.java.arg;    //FIXME: ini akan timbul error ketika tidak ada arg
+    if(wfconfig.action.hasOwnProperty('spark')){
+      statxml.action.spark.arg = arg || wfconfig.action.spark.arg;    //FIXME: ini akan timbul error ketika tidak ada arg
+    }else {
+      statxml.action.java.arg = arg || wfconfig.action.java.arg;    //FIXME: ini akan timbul error ketika tidak ada arg
+    }
   } else {
     statxml.$.name = choosedName;
     statxml.action.$.name = choosedName;
     statxml.start.$.to = choosedName;
     statxml.action.java.arg = arg;    //FIXME: ini akan timbul error ketika tidak ada arg
   }
-  statxml.action.java.file = '${nameNode}' + this.jarloc + '${namajar}';
+  if(wfconfig.action.hasOwnProperty('spark')){
+    statxml.action.spark.jar = '${nameNode}' + this.jarloc + '${namajar}';
+  }else {
+    statxml.action.java.file = '${nameNode}' + this.jarloc + '${namajar}';
+  }
 
   // console.log(wfconfig);
   var xml = xmlbuild.buildObject(statxml);
@@ -229,14 +295,21 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
   hdfsOpt.localpath = tmpfile;
   hdfsOpt.path = this.wfloc + choosedName + '.xml';
 
-
   fs.writeFile(tmpfile, xml, function writeFilecb (err) {
     if (err) { throw err; } else {
       self.hdfs.upload(hdfsOpt, function (e, r, b) {
-        if (e) {
+        if (e || r.statusCode != '200') {
           console.error(r);
           console.error(b);
-          cb(e);
+          if(e){
+            self.error = e;
+            self.emit('error');
+            cb(e);
+          }else{
+            self.error = b;
+            self.emit('error');
+            cb(b);
+          }
         } else {
           fs.unlinkSync(tmpfile);
           self.wffile = self.wfloc + choosedName + '.xml';
@@ -317,7 +390,6 @@ Oozie.prototype.gencoord = function (coordconfig, cb) {
   var xml = xmlbuild.buildObject(statxml);
   this.workflow = statxml;
   this.xml.workflow = xml;
-  // debugger;
   var hdfsOpt = JSON.parse(JSON.stringify(this.hdfsOpt));
 
   hdfsOpt.localpath = tmpfile;
@@ -327,12 +399,18 @@ Oozie.prototype.gencoord = function (coordconfig, cb) {
   fs.writeFile(tmpfile, xml, function writeFilecb (err) {
     if (err) { throw err; } else {
       self.hdfs.upload(hdfsOpt, function (e, r, b) {
-        if (e) {
+        if (e || r.statusCode != '200') {
           console.error(r);
           console.error(b);
-          self.error = e;
-          self.emit('coordError');
-          cb(e);
+          if(e){
+            self.error = e;
+            self.emit('coordError');
+            cb(e);
+          }else{
+            self.error = b;
+            self.emit('coordError');
+            cb(b);
+          }
         } else {
           fs.unlinkSync(tmpfile);
           self.wffile = self.wfloc + choosedName + '.xml';
@@ -356,6 +434,7 @@ Oozie.prototype.getDefaultProperty = function () {
   var hdfsurl = JSON.parse(JSON.stringify(this.config.node.nameNode));
   hdfsurl.protocol = 'hdfs';
   hdfsurl.slashes = true;
+
   return {
     property: [
       {
@@ -381,6 +460,14 @@ Oozie.prototype.getDefaultProperty = function () {
       {
         name: 'user.name',
         value: this.config.node.oozie.user
+      },
+      {
+        name: 'mapreduce.job.queuename',
+        value: '${queueName}'
+      },
+      {
+        name: 'mapred.job.queue.name',
+        value: '${queueName}'
       }
     ]
   };
@@ -479,7 +566,6 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
     });
 
   propraw.property = propraw.property.concat(prop);   // FIXME: this lead to duplicate key.
-
   if (name) {
     this.name = name;
   }
@@ -496,31 +582,62 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
     wfraw.action.name = this.name;
   }
 
-  // wfraw.action.java['main-class'] = className;
-  if (wfraw.action.java) {
-    wfraw.action.java.arg = arg;
-    wfraw.action.java.file = jobfile;
+  switch (type) {
+    case 'spark':
+      if (wfraw.action.spark) {
+        wfraw.action.spark.arg = arg;
+        wfraw.action.spark.jar = jobfile;
+      }
+    break;
+
+    default:
+      // wfraw.action.java['main-class'] = className;
+      if (wfraw.action.java) {
+        wfraw.action.java.arg = arg;
+        wfraw.action.java.file = jobfile;
+      }
   }
 
   if (process.env.NODE_ENV === 'development') {
     console.trace(propraw);
   }
-
   this.genwf(null, wfraw, function (err, path) {
     if (err) { throw err; } else {
-      if (wfraw.action.java) {
-        propraw.property.push({
-          name: 'oozie.wf.application.path',
-          value: path
-        });
-        propraw.property.push({
-          name: 'namajar',
-          value: jobfile
-        });
-        propraw.property.push({
-          name: 'classname',
-          value: className
-        });
+      propraw.property.push({
+        name: 'oozie.wf.application.path',
+        value: path
+      });
+      propraw.property.push({
+        name: 'classname',
+        value: className
+      });
+      propraw.property.push({
+        name: 'namajar',
+        value: jobfile
+      });
+      switch (type) {
+        case 'spark':
+          propraw.property.push({
+            name: 'sparkname',
+            value: wfraw.name
+          });
+          break;
+        default:
+        //XXX: moved to line 607
+          // if (wfraw.action.java) {
+            // propraw.property.push({
+            //   name: 'oozie.wf.application.path',
+            //   value: path
+            // });
+            // propraw.property.push({
+            //   name: 'namajar',
+            //   value: jobfile
+            // });
+            // propraw.property.push({
+            //   name: 'classname',
+            //   value: className
+            // });
+          // }
       }
 
       self.property = propraw;
@@ -529,7 +646,6 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
       if (process.env.NODE_ENV === 'development') {
         console.trace(xmlbuild.buildObject(propraw));
       }
-
       self.rest.post('jobs', {}, {
         body: xmlbuild.buildObject(propraw),
         headers: {
@@ -549,8 +665,8 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
             self.jobid = out.id;
             self.emit('jobSubmitted');
           } catch (er) {
-            console.log(self.error);
             self.error = r.caseless.dict['oozie-error-message'];
+            console.log(self.error);
             self.emit('error');
           }
         }
@@ -644,7 +760,7 @@ Oozie.prototype.submitcoord = function (type, name, jobfile, className, arg, pro
             self.emit('coordSubmitted');
             // cb(null, out);
           } catch (er) {
-            self.error = er;
+            self.error = r.caseless.dict['oozie-error-message'];
             self.emit('coordError');
             // cb(null, b);
           }
@@ -784,22 +900,36 @@ Oozie.prototype.resume = function (jobid) {
  * Re running job, identified by jobid.
  * @param  {String} jobid Job id that needed to run.
  */
-Oozie.prototype.rerun = function (jobid) {
+Oozie.prototype.rerun = function (jobid, body) {
   // TODO: add property alternative as parameter. each property must be unique.
-  var self = this, id;
-
+  var self = this, id, newbody;
   if (jobid) {
     id = jobid;
   } else {
     id = this.jobid;
   }
+  if (body) {
+    newbody = body;
+  } else {
+    newbody = '<configuration><property><name>oozie.wf.rerun.skip.nodes</name><value>:start:</value></property></configuration>';
+  }
 
   this.rest.put('job', {id: id}, {
+    headers: {
+      'Content-Type': 'application/xml;charset=UTF-8'
+    },
     qs: {
       action: 'rerun'
     },
-    body: self.xml.property
-  }, defaultResponse);
+    body: newbody
+  }, function (e,r,b){
+    if (r.statusCode == '200'){
+      self.emit('reruned');
+    }else{
+      self.error = r.caseless.dict['oozie-error-message'];
+      self.emit('error:rerun');
+    }
+  });
 };
 
 /**
