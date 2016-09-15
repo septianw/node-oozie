@@ -3,7 +3,7 @@ build:
   commands:
     - apt-get -y update
     - echo "192.168.1.159  yava yava.solusi247.com" >> /etc/hosts
-    - apt-get -y install npm
+    - apt-get -y install npm tar
     - npm install -g mocha
-    - tar --strip-components 1 -zxf node-*.tar.gz
-    - mocha -R good-mocha-html-reporter -t 7000 mytest.js
+    - tar --strip-components 1 -zxf node-v4.4.2-linux-x64.tar.gz
+    - mocha -t 7000 mytest.js
