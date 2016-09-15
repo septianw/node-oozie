@@ -19,6 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "apiclient": "^0.2.5",
+    "good-mocha-html-reporter": "^2.0.1",
     "hdfs247": "0.0.7",
     "moniker": "^0.1.2",
     "tmp": "0.0.28",
