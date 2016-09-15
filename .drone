@@ -1,0 +1,6 @@
+build:
+  image: 192.168.1.245:24799/essloc
+  commands:
+    - apt-get -y update
+    - echo "192.168.1.159  yava yava.solusi247.com" >> /etc/hosts
+    - mocha -R good-mocha-html-reporter -t 7000 mytest.js 
