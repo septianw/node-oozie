@@ -601,7 +601,6 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
   if (process.env.NODE_ENV === 'development') {
     console.trace(propraw);
   }
-
   this.genwf(null, wfraw, function (err, path) {
     if (err) { throw err; } else {
       propraw.property.push({
@@ -667,7 +666,7 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
             self.emit('jobSubmitted');
           } catch (er) {
             self.error = r.caseless.dict['oozie-error-message'];
-            console.log(self.error);debugger
+            console.log(self.error);
             self.emit('error');
           }
         }
@@ -901,22 +900,36 @@ Oozie.prototype.resume = function (jobid) {
  * Re running job, identified by jobid.
  * @param  {String} jobid Job id that needed to run.
  */
-Oozie.prototype.rerun = function (jobid) {
+Oozie.prototype.rerun = function (jobid, body) {
   // TODO: add property alternative as parameter. each property must be unique.
-  var self = this, id;
-
+  var self = this, id, newbody;
   if (jobid) {
     id = jobid;
   } else {
     id = this.jobid;
   }
+  if (body) {
+    newbody = body;
+  } else {
+    newbody = '<configuration><property><name>oozie.wf.rerun.skip.nodes</name><value>:start:</value></property></configuration>';
+  }
 
   this.rest.put('job', {id: id}, {
+    headers: {
+      'Content-Type': 'application/xml;charset=UTF-8'
+    },
     qs: {
       action: 'rerun'
     },
-    body: self.xml.property
-  }, defaultResponse);
+    body: newbody
+  }, function (e,r,b){
+    if (r.statusCode == '200'){
+      self.emit('reruned');
+    }else{
+      self.error = r.caseless.dict['oozie-error-message'];
+      self.emit('error:rerun');
+    }
+  });
 };
 
 /**
