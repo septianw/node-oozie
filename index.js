@@ -216,7 +216,7 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
     statxml.start.$.to = choosedName;
     statxml.action.java.arg = arg;    //FIXME: ini akan timbul error ketika tidak ada arg
   }
-  statxml.action.java.file = '${nameNode}' + this.jarloc + '${namajar}';
+  statxml.action.java.file = '${nameNode}' + this.jarloc + '${jarname}';
 
   // console.log(wfconfig);
   var xml = xmlbuild.buildObject(statxml);
@@ -473,6 +473,9 @@ Oozie.prototype.getDefaultCoord = function () {
  */
 Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wfconfig, cb) {
   var self = this;
+  if (!arg) {
+    arg = [' '];
+  }
   var propraw = this.getDefaultProperty(), wfraw,
     xmlbuild = new xml2js.Builder({
       rootName: 'configuration'
@@ -514,7 +517,7 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
           value: path
         });
         propraw.property.push({
-          name: 'namajar',
+          name: 'jarname',
           value: jobfile
         });
         propraw.property.push({
@@ -609,7 +612,7 @@ Oozie.prototype.submitcoord = function (type, name, jobfile, className, arg, pro
           value: path
         });
         propraw.property.push({
-          name: 'namajar',
+          name: 'jarname',
           value: jobfile
         });
         propraw.property.push({
