@@ -303,12 +303,12 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
           console.error(b);
           if(e){
             self.error = e;
-            self.emit('error');
+            // self.emit('error');
             cb(e);
           }else{
-            self.error = b;
-            self.emit('error');
-            cb(b);
+            self.error = r.statusMessage;
+            // self.emit('error');
+            cb(r.statusMessage);
           }
         } else {
           fs.unlinkSync(tmpfile);
@@ -605,7 +605,11 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
     console.trace(propraw);
   }
   this.genwf(null, wfraw, function (err, path) {
-    if (err) { throw err; } else {
+    if (err) {
+      self.error = err;
+      console.log(self.error);
+      self.emit('error');
+    } else {
       propraw.property.push({
         name: 'oozie.wf.application.path',
         value: path

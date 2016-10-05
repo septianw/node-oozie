@@ -7,4 +7,4 @@ build:
     - apt-get -y install npm
     - npm install -g mocha good-mocha-html-reporter
     - cd /usr/local; tar --strip-components 1 -zxf $pwd/node-v4.4.2-linux-x64.tar.gz; cd $pwd
-    - mocha -R good-mocha-html-reporter -t 7000 mytest.js
+    - mocha -R good-mocha-html-reporter -t 7000
