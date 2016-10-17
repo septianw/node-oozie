@@ -559,7 +559,7 @@ Oozie.prototype.getDefaultCoord = function () {
  * @param  {Boolean}  start      Start job immediately after submitted
  * @param  {Function} cb         Callback function.
  */
-Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wfconfig, start, cb) {
+Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wfconfig, cb, start) {
   var self = this;
   var reqoptions = {}
   if (!arg) {

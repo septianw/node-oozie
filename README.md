@@ -72,7 +72,7 @@
     oozie.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
       name: 'namajar',
       value: 'casetwo.jar'
-    }], wfconfig, false);
+    }], wfconfig, function () {}, false);
 
     oozie.on('jobSubmitted', function () {
       console.log(subject01.jobid);
@@ -108,10 +108,15 @@ Oozie class constructor
     * [.getName()](#Oozie+getName) ⇒ <code>String</code>
     * [.setProperty(property)](#Oozie+setProperty)
     * [.genwf(arg, wfconfig, cb)](#Oozie+genwf)
+    * [.gencoord(coordconfig, cb)](#Oozie+gencoord)
     * [.getDefaultProperty()](#Oozie+getDefaultProperty) ⇒ <code>Object</code>
     * [.getDefaultWorkflow()](#Oozie+getDefaultWorkflow) ⇒ <code>Object</code>
-    * [.submit(type, name, jobfile, className, arg, prop, wfconfig, cb)](#Oozie+submit)
+    * [.submit(type, name, jobfile, className, arg, prop, wfconfig, start, cb)](#Oozie+submit)
+    * [.submitcoord(name, prop, coordconfig, cb)](#Oozie+submitcoord)
     * [.start(jobid)](#Oozie+start)
+    * [.kill(jobid)](#Oozie+kill)
+    * [.suspend(jobid)](#Oozie+suspend)
+    * [.resume(jobid)](#Oozie+resume)
     * [.rerun(jobid)](#Oozie+rerun)
     * [.get(jobid)](#Oozie+get)
 
@@ -157,6 +162,18 @@ Generate oozie workflow-app
 | wfconfig | <code>Object</code> | Full workflow config |
 | cb | <code>function</code> | Callback function |
 
+<a name="Oozie+gencoord"></a>
+
+### oozie.gencoord(coordconfig, cb)
+Generate oozie coordinator-app
+
+**Kind**: instance method of <code>[Oozie](#Oozie)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| coordconfig | <code>Object</code> | Full coordinator config |
+| cb | <code>function</code> | Callback function |
+
 <a name="Oozie+getDefaultProperty"></a>
 
 ### oozie.getDefaultProperty() ⇒ <code>Object</code>
@@ -173,7 +190,7 @@ Get default workflow
 **Returns**: <code>Object</code> - Default workflow object.  
 <a name="Oozie+submit"></a>
 
-### oozie.submit(type, name, jobfile, className, arg, prop, wfconfig, cb)
+### oozie.submit(type, name, jobfile, className, arg, prop, wfconfig, start, cb)
 submit job to oozie
 
 **Kind**: instance method of <code>[Oozie](#Oozie)</code>  
@@ -187,6 +204,21 @@ submit job to oozie
 | arg | <code>Array</code> | Array of job arguments, set empty array to set no argument. |
 | prop | <code>Array</code> | Array of object properties, this array will be concatenated to default properties, set empty array if using default properties only. |
 | wfconfig | <code>Object</code> | Object of custom workflow config |
+| start | <code>Boolean</code> | Start job immediately after submitted |
+| cb | <code>function</code> | Callback function. |
+
+<a name="Oozie+submitcoord"></a>
+
+### oozie.submitcoord(name, prop, coordconfig, cb)
+submit coordinator to oozie
+
+**Kind**: instance method of <code>[Oozie](#Oozie)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>String</code> | Name of job, set to random if null |
+| prop | <code>Array</code> | Array of object properties, this array will be concatenated to default properties, set empty array if using default properties only. |
+| coordconfig | <code>Object</code> | Object of custom workflow config |
 | cb | <code>function</code> | Callback function. |
 
 <a name="Oozie+start"></a>
@@ -199,6 +231,39 @@ Start Job
 | Param | Type | Description |
 | --- | --- | --- |
 | jobid | <code>String</code> | Job ID to be Start. |
+
+<a name="Oozie+kill"></a>
+
+### oozie.kill(jobid)
+Kill Job
+
+**Kind**: instance method of <code>[Oozie](#Oozie)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| jobid | <code>String</code> | Job ID to be Killed. |
+
+<a name="Oozie+suspend"></a>
+
+### oozie.suspend(jobid)
+Suspend Job
+
+**Kind**: instance method of <code>[Oozie](#Oozie)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| jobid | <code>String</code> | Job ID to be Suspended. |
+
+<a name="Oozie+resume"></a>
+
+### oozie.resume(jobid)
+Resume Job
+
+**Kind**: instance method of <code>[Oozie](#Oozie)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| jobid | <code>String</code> | Job ID to be Resumed. |
 
 <a name="Oozie+rerun"></a>
 
