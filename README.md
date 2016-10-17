@@ -72,7 +72,7 @@
     oozie.submit('java', null, 'casetwo.jar', 'dummy.casetwo', [], [{
       name: 'namajar',
       value: 'casetwo.jar'
-    }], wfconfig);
+    }], wfconfig, false);
 
     oozie.on('jobSubmitted', function () {
       console.log(subject01.jobid);
