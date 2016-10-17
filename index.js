@@ -556,10 +556,12 @@ Oozie.prototype.getDefaultCoord = function () {
  * @param  {Array}    arg        Array of job arguments, set empty array to set no argument.
  * @param  {Array}    prop       Array of object properties, this array will be concatenated to default properties, set empty array if using default properties only.
  * @param  {Object}   wfconfig   Object of custom workflow config
+ * @param  {Boolean}  start      Start job immediately after submitted
  * @param  {Function} cb         Callback function.
  */
-Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wfconfig, cb) {
+Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wfconfig, start, cb) {
   var self = this;
+  var reqoptions = {}
   if (!arg) {
     arg = [' '];
   }
@@ -653,25 +655,29 @@ Oozie.prototype.submit = function (type, name, jobfile, className, arg, prop, wf
       if (process.env.NODE_ENV === 'development') {
         console.trace(xmlbuild.buildObject(propraw));
       }
-      self.rest.post('jobs', {}, {
-        body: xmlbuild.buildObject(propraw),
-        headers: {
-          'Content-Type': 'application/xml;charset=UTF-8'
+      reqoptions.body = xmlbuild.buildObject(propraw);
+      reqoptions.headers = {
+        'Content-Type': 'application/xml;charset=UTF-8'
+      };
+      if (start) {
+        reqoptions.qs = {
+          action: 'start'
         }
-      }, function (e, r, b) {
+      }
+      self.rest.post('jobs', {}, reqoptions, function (e, r, b) {
         if (process.env.NODE_ENV === 'development') {
-          // console.trace(require('util').inspect(r, { depth: null }));
+          console.trace(require('util').inspect(r, { depth: null }));
         }
         if (e) {
           self.error = e;
           self.emit('error');
         } else {
           var out;
-          try {
+          if (r.statusCode == 201) {
             out = JSON.parse(b);
             self.jobid = out.id;
             self.emit('jobSubmitted');
-          } catch (er) {
+          } else {
             self.error = r.caseless.dict['oozie-error-message'];
             console.log(self.error);
             self.emit('error');
