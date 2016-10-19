@@ -10,6 +10,7 @@ var Events = require('events').EventEmitter;
  * @param {Object} config Config object.
  */
 function Oozie (config) {
+  Events.call(this);
   var self = this;
   this.xml = {};
   this.config = config;
