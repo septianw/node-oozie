@@ -434,12 +434,17 @@ Oozie.prototype.getDefaultProperty = function () {
   var hdfsurl = JSON.parse(JSON.stringify(this.config.node.nameNode));
   hdfsurl.protocol = 'hdfs';
   hdfsurl.slashes = true;
+  if (hdfsurl.port.length === 0){
+    hdfsurl = url.format(hdfsurl).replace(/[:]+/g,'');
+  }else{
+    hdfsurl = url.format(hdfsurl)
+  }
 
   return {
     property: [
       {
         name: 'nameNode',
-        value: url.format(hdfsurl)
+        value: hdfsurl
       },
       {
         name: 'jobTracker',
