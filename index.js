@@ -50,13 +50,11 @@ function Oozie (config) {
     if (e) {
       self.error = e;
       self.emit('error');
-      throw e;
     }
     self.hdfs.mkdirs({path: self.jarloc, 'user.name': config.node.hdfs.user}, function (e, r, b) {
       if (e) {
         self.error = e;
         self.emit('error');
-        throw e;
       }
 
       try {
@@ -297,7 +295,10 @@ Oozie.prototype.genwf = function (arg, wfconfig, cb) {
   hdfsOpt.path = this.wfloc + choosedName + '.xml';
 
   fs.writeFile(tmpfile, xml, function writeFilecb (err) {
-    if (err) { throw err; } else {
+    if (err) {
+      self.error = e;
+      self.emit('error');
+    } else {
       self.hdfs.upload(hdfsOpt, function (e, r, b) {
         if (e || r.statusCode != '200') {
           console.error(r);
@@ -398,7 +399,10 @@ Oozie.prototype.gencoord = function (coordconfig, cb) {
 
 
   fs.writeFile(tmpfile, xml, function writeFilecb (err) {
-    if (err) { throw err; } else {
+    if (err) {
+      self.error = e;
+      self.emit('error');
+    } else {
       self.hdfs.upload(hdfsOpt, function (e, r, b) {
         if (e || r.statusCode != '200') {
           console.error(r);
@@ -737,7 +741,10 @@ Oozie.prototype.submitcoord = function (type, name, jobfile, className, arg, pro
   // console.log(coordraw);
 
   this.gencoord(coordraw, function (err, path) {
-    if (err) { console.log('cekidot'); throw err; } else {
+    if (err) {
+      self.error = e;
+      self.emit('error');
+    } else {
       if (coordraw.action.workflow) {
         propraw.property.push({
           name: 'oozie.coord.application.path',
@@ -795,12 +802,12 @@ Oozie.prototype.submitcoord = function (type, name, jobfile, className, arg, pro
  * @param  {Object} r Response Object from request.
  * @param  {Mixed} b Response body from request.
  */
-function defaultResponse(e, r, b) {
-  if (process.env.NODE_ENV === 'development') {
-    // console.trace(require('util').inspect(r, { depth: null }));
-  }
-  if (e) { throw e; }
-}
+// function defaultResponse(e, r, b) {
+//   if (process.env.NODE_ENV === 'development') {
+//     // console.trace(require('util').inspect(r, { depth: null }));
+//   }
+//   if (e) { throw e; }
+// }
 
 /**
  * Start Job
