@@ -1,6 +1,6 @@
 {
   "name": "oozie",
-  "version": "0.2.3-beta",
+  "version": "0.2.3-beta.2",
   "description": "Javascript interface to Oozie hadoop scheduler.",
   "main": "index.js",
   "scripts": {
