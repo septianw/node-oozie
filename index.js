@@ -972,4 +972,38 @@ Oozie.prototype.get = function (jobid) {
   });
 };
 
+/**
+ * List jobs currently run by oozie
+ * @param  {String} jobType Optional, type of job want to listed. Current known
+ *                          value is coordinator or empty for list workflow type
+ * @return {void}           This function does not return anything.
+ */
+Oozie.prototype.listJobs = function (jobType) {
+  var self = this, type, opt = {};
+
+  if (jobType) {
+    opt = {
+      qs: {
+        jobtype: jobType
+      }
+    };
+  }
+
+  self.rest.get('jobs', {}, opt, function (e, r, b) {
+    if (e) {
+      self.error = e;
+      self.emit('error');
+    } else {
+      try {
+        jobs = JSON.parse(b);
+        self.jobs = jobs;
+        self.emit('jobsReady');
+      } catch (er) {
+        self.error = r.caseless.dict['oozie-error-message'];
+        self.emit('error');
+      }
+    }
+  });
+};
+
 exports = module.exports = Oozie;

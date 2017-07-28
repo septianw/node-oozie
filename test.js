@@ -6,23 +6,23 @@ var config = {
   node: {
     hdfs: {
       protocol: 'http',
-      hostname: 'yava.solusi247.com',
+      hostname: 'yava.iri.com',
       port: 50070,
       user: 'yava',
       overwrite: true
     },
     jobTracker: {
       protocol: 'http',
-      hostname: 'yava.solusi247.com',
+      hostname: 'yava.iri.com',
       port: 8050
     },
     nameNode: {
-      hostname: 'yava.solusi247.com',
+      hostname: 'yava.iri.com',
       port: 8020
     },
     oozie: {
       protocol: 'http',
-      hostname: 'yava.solusi247.com',
+      hostname: 'yava.iri.com',
       port: 11000,
       user: 'yava'
     }
@@ -227,6 +227,15 @@ describe('node-oozie test file', function () {
       console.log(subject01.error);
       done();
     });
+  });
 
+  describe('List all submitted jobs', function() {
+    it('Should return list of jobs on server', function (done) {
+      subject01.listJobs();
+      subject01.once('jobsReady', function() {
+        console.log(subject01.jobs);
+        done();
+      });
+    });
   });
 });
