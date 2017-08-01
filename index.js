@@ -16,7 +16,7 @@ function Oozie (config) {
   this.config = config;
   this.setName();
 
-  oseed.base.protocol = config.node.oozie.protocol;
+  oseed.base.protocol = config.node.oozie.protocol || 'http';
   oseed.base.hostname = config.node.oozie.hostname;
   oseed.base.port = config.node.oozie.port;
 
